@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.generation.blogpessoal.model.Postagem;
 import com.generation.blogpessoal.repository.PostagemRepository;
+import com.generation.blogpessoal.repository.TemaRepository;
 
 import jakarta.validation.Valid;
 
@@ -28,6 +29,8 @@ public class PostagensController {
 
 	@Autowired
 	private PostagemRepository postagemRepository;
+	@Autowired
+	private TemaRepository temaRepository;
 	
 	@GetMapping
 	public ResponseEntity<List<Postagem>> getAll(){
@@ -59,28 +62,28 @@ public class PostagensController {
 	//Verbo post -> insert
 	@PostMapping
 	public ResponseEntity<Postagem> post(@Valid @RequestBody Postagem postagem){
-		//@Valid -> validação feita na model
-		//@RequestBody -> indicando que teremos um corpo para requisição
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(postagemRepository.save(postagem));
-		/*
-		 * botãozinho - status -> statuscode 201
-		 * 
-		 */
+		if (temaRepository.existsById(postagem.getTema().getId()))
+			return ResponseEntity.status(HttpStatus.CREATED)
+					.body(postagemRepository.save(postagem));
+			
+		throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tema não existe!", null);
 	}
 	
 	//verbo put -> update
 	@PutMapping
 	public ResponseEntity<Postagem> put(@Valid @RequestBody Postagem postagem){
+		if (postagemRepository.existsById(postagem.getId())){
+			
+			if (temaRepository.existsById(postagem.getTema().getId()))
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(postagemRepository.save(postagem));
+			
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tema não existe!", null);
+			
+		}			
+			
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 		
-		return postagemRepository.findById(postagem.getId())
-				//findById(9) busca no banco a postagem 
-				.map(resposta->ResponseEntity.status(HttpStatus.OK)
-						//mapeamos o que foi encontrado no findByID e retornamos o status code OK200
-						.body(postagemRepository.save(postagem)))
-						//retorna o corpo com a postagem que foi salva
-				.orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-				// caso não tenha mapeado nenhum dado ele retorna o status code Not Found
 	}
 	
 	
